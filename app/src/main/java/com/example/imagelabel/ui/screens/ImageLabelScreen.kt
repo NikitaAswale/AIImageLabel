@@ -22,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -111,8 +113,12 @@ fun ImageLabelScreen(
                 }
                 
                 // Results Section
-                if (uiState.labels.isNotEmpty()) {
-                    item {
+                item {
+                    AnimatedVisibility(
+                        visible = uiState.labels.isNotEmpty(),
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically()
+                    ) {
                         ResultsCard(
                             title = "Image Labels",
                             icon = Icons.Default.Label,
@@ -121,8 +127,12 @@ fun ImageLabelScreen(
                     }
                 }
                 
-                if (uiState.objects.isNotEmpty()) {
-                    item {
+                item {
+                    AnimatedVisibility(
+                        visible = uiState.objects.isNotEmpty(),
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically()
+                    ) {
                         ObjectResultsCard(
                             objects = uiState.objects
                         )
@@ -164,15 +174,15 @@ private fun TopAppBar() {
     CenterAlignedTopAppBar(
         title = {
             Text(
-                "Image Labeling",
+                "AI Image Inspector",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold
                 )
             )
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = Color.Transparent,
+            titleContentColor = MaterialTheme.colorScheme.onSurface
         )
     )
 }
@@ -185,71 +195,80 @@ private fun ImageSelectionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (selectedImage != null) {
-                Image(
-                    bitmap = selectedImage.asImageBitmap(),
-                    contentDescription = "Selected Image",
+        AnimatedContent(
+            targetState = selectedImage,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500))
+            },
+            label = "Image"
+        ) { image ->
+            if (image != null) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        bitmap = image.asImageBitmap(),
+                        contentDescription = "Selected Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedButton(
+                        onClick = onSelectImageClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Photo, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Change Image")
+                    }
+                }
+            } else {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(250.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedButton(
-                    onClick = onSelectImageClick,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Change Image")
-                }
-            } else {
-                Icon(
-                    Icons.Default.PhotoCamera,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            CircleShape
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        .padding(20.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    "Select an Image",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Text(
-                    "Choose an image from gallery or take a new photo to start labeling",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Spacer(modifier = Modifier.height(20.dp))
-                
-                Button(
-                    onClick = onSelectImageClick,
-                    modifier = Modifier.fillMaxWidth()
+                        .clickable { onSelectImageClick() }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Select Image")
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.AddPhotoAlternate,
+                            contentDescription = "Add Image",
+                            modifier = Modifier.size(60.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Select an Image",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Tap here to choose an image",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -269,47 +288,29 @@ private fun ActionButtonsCard(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "AI Analysis",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+            ActionButton(
+                text = "Label Image",
+                icon = Icons.Default.Label,
+                onClick = onLabelImageClick,
+                isLoading = isProcessing && processingType == ProcessingType.LABELING,
+                modifier = Modifier.weight(1f)
             )
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ActionButton(
-                    text = "Get Labels",
-                    icon = Icons.Default.Label,
-                    onClick = onLabelImageClick,
-                    enabled = !isProcessing,
-                    isLoading = isProcessing && processingType == ProcessingType.LABELING,
-                    modifier = Modifier.weight(1f)
-                )
-                
-                ActionButton(
-                    text = "Detect Objects",
-                    icon = Icons.Default.Search,
-                    onClick = onDetectObjectsClick,
-                    enabled = !isProcessing,
-                    isLoading = isProcessing && processingType == ProcessingType.OBJECT_DETECTION,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            
-            OutlinedButton(
-                onClick = onClearResultsClick,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isProcessing
-            ) {
-                Icon(Icons.Default.Clear, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Clear Results")
+            ActionButton(
+                text = "Detect Objects",
+                icon = Icons.Default.Search,
+                onClick = onDetectObjectsClick,
+                isLoading = isProcessing && processingType == ProcessingType.OBJECT_DETECTION,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onClearResultsClick) {
+                Icon(Icons.Default.Clear, contentDescription = "Clear Results")
             }
         }
     }
@@ -320,26 +321,35 @@ private fun ActionButton(
     text: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    enabled: Boolean,
     isLoading: Boolean,
     modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier,
-        enabled = enabled
+        enabled = !isLoading,
+        modifier = modifier
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        } else {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        AnimatedContent(
+            targetState = isLoading,
+            transitionSpec = {
+                fadeIn() togetherWith fadeOut()
+            },
+            label = "Button Content"
+        ) { loading ->
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text)
+                }
+            }
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text, fontSize = 12.sp)
     }
 }
 
@@ -354,31 +364,53 @@ private fun ResultsCard(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    title,
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            labels.forEach { label ->
-                LabelItem(label = label)
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            labels.forEach { result ->
+                LabelRow(result = result)
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun LabelRow(result: LabelResult) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = result.text,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = "Confidence: ${(result.confidence * 100).toInt()}%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = result.confidence,
+                modifier = Modifier
+                    .height(8.dp)
+                    .clip(CircleShape)
+            )
         }
     }
 }
@@ -392,33 +424,25 @@ private fun ObjectResultsCard(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.Search,
+                    Icons.Default.Category,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Detected Objects",
+                    text = "Detected Objects",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            objects.forEachIndexed { index, obj ->
-                ObjectItem(objectResult = obj, index = index + 1)
+            Spacer(modifier = Modifier.height(12.dp))
+            objects.forEachIndexed { index, result ->
+                ObjectRow(result = result, index = index)
                 if (index < objects.size - 1) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
         }
@@ -426,62 +450,22 @@ private fun ObjectResultsCard(
 }
 
 @Composable
-private fun LabelItem(label: LabelResult) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label.text,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
-        
-        ConfidenceChip(confidence = label.confidence)
-    }
-}
-
-@Composable
-private fun ObjectItem(objectResult: ObjectResult, index: Int) {
+private fun ObjectRow(result: ObjectResult, index: Int) {
     Column {
-        Text(
-            "Object $index",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        objectResult.labels.forEach { label ->
-            LabelItem(label = label)
-            Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Object #${index + 1}",
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.weight(1f)
+            )
         }
-    }
-}
-
-@Composable
-private fun ConfidenceChip(confidence: Float) {
-    val percentage = (confidence * 100).toInt()
-    val color = when {
-        percentage >= 80 -> MaterialTheme.colorScheme.primary
-        percentage >= 60 -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.error
-    }
-    
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.1f),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.3f))
-    ) {
-        Text(
-            text = "$percentage%",
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = color,
-            fontWeight = FontWeight.Medium
-        )
+        Spacer(modifier = Modifier.height(8.dp))
+        result.labels.forEach { label ->
+            LabelRow(result = label)
+        }
     }
 }
 
@@ -495,24 +479,36 @@ private fun ImageSourceDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Select Image Source",
+                "Choose Image Source",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
-            Column {
-                DialogOption(
-                    icon = Icons.Default.PhotoCamera,
-                    text = "Take Photo",
-                    onClick = onCameraClick
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Choose Image Source",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                DialogOption(
-                    icon = Icons.Default.PhotoLibrary,
-                    text = "Choose from Gallery",
-                    onClick = onGalleryClick
-                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    DialogButton(
+                        text = "Camera",
+                        icon = Icons.Default.PhotoCamera,
+                        onClick = onCameraClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                    DialogButton(
+                        text = "Gallery",
+                        icon = Icons.Default.PhotoLibrary,
+                        onClick = onGalleryClick,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         },
         confirmButton = {},
@@ -525,34 +521,24 @@ private fun ImageSourceDialog(
 }
 
 @Composable
-private fun DialogOption(
-    icon: ImageVector,
+fun DialogButton(
     text: String,
-    onClick: () -> Unit
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(100.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text)
         }
     }
 } 
